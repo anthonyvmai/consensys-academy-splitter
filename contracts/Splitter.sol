@@ -28,7 +28,7 @@ contract Splitter {
 
         uint amt = balances[msg.sender];
 
-        require(amt  > 0);
+        require(amt > 0);
 
         balances[msg.sender] = 0;
         msg.sender.transfer(amt);
