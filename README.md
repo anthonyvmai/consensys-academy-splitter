@@ -1,1 +1,0 @@
-# consensys-academy-splitter
