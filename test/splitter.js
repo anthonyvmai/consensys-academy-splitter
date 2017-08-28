@@ -1,5 +1,7 @@
 var Splitter = artifacts.require("./Splitter.sol");
 
+require('bluebird').promisifyAll(web3.eth, { suffix: "Promise" });
+
 contract('Splitter', accounts => {
 
     var instance;
@@ -62,19 +64,26 @@ contract('Splitter', accounts => {
     });
 
     it("should allow withdrawals", () => {
-        const beforeEthBalance = web3.eth.getBalance(accounts[1]);
         const sent = 4;
         const half = sent / 2;
         const gasPrice = 10;
 
-        return instance.splitSend(accounts[1], accounts[2], {from: accounts[0], value: sent}).then(tx => {
+        var beforeWeiBalance;
+        var weiUsed;
+
+        return web3.eth.getBalancePromise(accounts[1]).then(balance => {
+            beforeWeiBalance = balance;
+            return instance.splitSend(accounts[1], accounts[2], {from: accounts[0], value: sent});
+        }).then(tx => {
             return instance.balances(accounts[1]);
         }).then(balance => {
             assert.equal(balance, half, "account 1's balance is not half of amount sent");
             return instance.withdraw({from: accounts[1], gasPrice: gasPrice});
         }).then(tx => {
-            const weiUsed = tx.receipt.gasUsed * gasPrice;
-            assert.deepEqual(beforeEthBalance.minus(weiUsed).plus(web3.toBigNumber(half)), web3.eth.getBalance(accounts[1]),
+            weiUsed = tx.receipt.gasUsed * gasPrice;
+            return web3.eth.getBalancePromise(accounts[1]);
+        }).then(afterWeiBalance => {
+            assert.deepEqual(beforeWeiBalance.minus(weiUsed).plus(web3.toBigNumber(half)), afterWeiBalance,
                 "account 1's wei balance did not increase by half of amount sent");
             return instance.balances(accounts[1]);
         }).then(balance => {
